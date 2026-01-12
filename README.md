@@ -2,7 +2,7 @@
 
 **Решение Demo2026 по специальности 09.02.06 «Сетевое и системное администрирование»**
 
-Данный репозиторий содержит пошаговую инструкцию по настройке сетевой инфраструктуры в соответствии с предложённой топологией. В документации описаны этапы базовой настройки, включая конфигурацию имён устройств, настройку IPv4, NAT, VLAN, туннелей GRE с динамической маршрутизацией (OSPF), а также настройку DNS и DHCP.
+Данный репозиторий содержит пошаговую инструкцию по настройке сетевой инфраструктуры в соответствии с предложённой топологией. В документации описаны этапы базовой настройки, включая конфигурацию имён устройств, настройку IPv4, NAT, VLAN, туннелей GRE с динамической маршрутизацией (OSPF), настройку DNS, DHCP, а также настройку контроллера домена Samba DC.
 
 > **Важно:**  
 > Все примеры с указанием интерфейсов, IP-адресов, масок и шлюзов приведены в качестве примера. В вашей сети данные параметры могут отличаться. Перед внесением изменений обязательно сверяйте настройки с актуальной топологией и требованиями вашей инфраструктуры.
@@ -11,11 +11,12 @@
 
 ## Содержание
 
+### Модуль 1: Настройка сетевой инфраструктуры
 - [Описание задания](#описание-задания)
 - [Диапазоны IP-адресов по RFC1918](#диапазоны-ip-адресов-по-rfc1918)
 - [Разделение IP-адресов по VLAN](#разделение-ip-адресов-по-vlan)
 - [Адресация и шлюзы для настройки ISP](#адресация-и-шлюзы-для-настройки-isp)
-- [Решение](#решение)
+- [Решение Модуля 1](#решение)
   - [1. Настройка имён устройств](#1-настройка-имен-устройств)
   - [2. Конфигурация IPv4 на JeOS](#2-конфигурация-ipv4-на-jeos)
   - [3. Перезагрузка сети и обновление пакетов](#3-перезагрузка-сети-и-обновление-пакетов)
@@ -35,6 +36,9 @@
   - [17. Настройка безопасного удалённого доступа](#17-настройка-безопасного-удаленного-доступа)
   - [18. Настройка динамической маршрутизации](#18-настройка-динамической-маршрутизации)
   - [19. Настройка DNS и DHCP](#19-настройка-dns-и-dhcp)
+
+### Модуль 2: Организация сетевого администрирования
+- [Задание 1. Настройка контроллера домена Samba DC](module2/task1-samba-dc.md)
 
 ---
 
@@ -124,15 +128,31 @@
 
 </details>
 
+<details>
+  <summary>Модуль №2: Организация сетевого администрирования (нажмите для развертывания)</summary>
+
+**Задание 1. Настройка контроллера домена Samba DC**
+
+- Имя домена: `au-team.irpo`
+- Введите в созданный домен машину HQ-CLI
+- Создайте 5 пользователей для офиса HQ: имена пользователей формата `hquser№` (например hquser1, hquser2 и т.д.)
+- Создайте группу `hq`, введите в группу созданных пользователей
+- Убедитесь, что пользователи группы `hq` имеют право аутентифицироваться на HQ-CLI
+- Пользователи группы `hq` должны иметь возможность повышать привилегии для выполнения ограниченного набора команд: `cat`, `grep`, `id`. Запускать другие команды с повышенными привилегиями пользователи группы права не имеют.
+
+➡️ **[Подробное решение Задания 1](module2/task1-samba-dc.md)**
+
+</details>
+
 ---
 
 ## Диапазоны IP-адресов по RFC1918
 
 | Диапазон             | CIDR           | Количество адресов | Пример диапазона                  |
 |----------------------|----------------|--------------------|-----------------------------------|
-| Класс A              | 10.0.0.0/8     | 16 777 216         | 10.0.0.0 – 10.255.255.255           |
-| Класс B              | 172.16.0.0/12  | 1 048 576          | 172.16.0.0 – 172.31.255.255          |
-| Класс C              | 192.168.0.0/16 | 65 536             | 192.168.0.0 – 192.168.255.255        |
+| Класс A              | 10.0.0.0/8     | 16 777 216         | 10.0.0.0 – 10.255.255.255           |
+| Класс B              | 172.16.0.0/12  | 1 048 576          | 172.16.0.0 – 172.31.255.255          |
+| Класс C              | 192.168.0.0/16 | 65 536             | 192.168.0.0 – 192.168.255.255        |
 
 ---
 
@@ -223,11 +243,14 @@ apt-get update && apt-get install mc tzdata iptables -y
 BOOTPROTO=dhcp
 TYPE=eth
 ```
+
 ---
-Перезапускаем сеть командой 
+
+Перезапускаем сеть командой
 ```bash
 systemctl restart network
 ```
+
 ---
 
 ### 3. Создание и настройка сетевых адаптеров (НА ISP В СТОРОНУ ПОДСЕТЕЙ HQ И BR)
@@ -236,20 +259,21 @@ systemctl restart network
    ```bash
    ip addr
    ```
-У меня сначала идёт hq потом br у вас будет наоборот если вы не поменяете в настройках виртуальной машины  ISP
+У меня сначала идёт hq потом br у вас будет наоборот если вы не поменяете в настройках виртуальной машины ISP
 2. Создайте каталог командной-для интерфейса для ens224:
-   ```bash
-   mkdir /etc/net/ifaces/ens224
-   ```
+```bash
+mkdir /etc/net/ifaces/ens224
+```
 3. Отредактируйте файл настроек:
    ```bash
    mcedit /etc/net/ifaces/ens224/options
    ```
    Пример содержимого:
-   ```bash
+   ```
    BOOTPROTO=static
    TYPE=eth
    ```
+
 4. Создайте файл для задания IP-адреса (например, для подсети HQ):
    ```bash
    mcedit /etc/net/ifaces/ens224/ipv4address
@@ -258,11 +282,13 @@ systemctl restart network
    ```
    172.16.4.1/28
    ```
+
 5. Аналогичным образом задайте IP-адреса для ens256 в сторону HQ в моём случае это BR и перезагрузите сеть командой:
    ```bash
    systemctl restart network
    ip addr - для проверки что сделали правильно
    ```
+
 ---
 
 ### 4. Настройка NAT (На ISP)
@@ -286,6 +312,7 @@ iptables -t nat -A POSTROUTING -o ens192 -s 172.16.5.0/28 -j MASQUERADE
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 ```
+
 ---
 
 ### 5. Включение пересылки пакетов
@@ -294,12 +321,11 @@ systemctl enable --now iptables
 ```bash
 mcedit /etc/net/sysctl.conf
 ```
-
-   - Измените строку net.ipv4.ip_forward:
-     ```diff
-     -#net.ipv4.ip_forward = 0
-     +net.ipv4.ip_forward = 1
-     ```
+  - Измените строку net.ipv4.ip_forward:
+    ```diff
+    -#net.ipv4.ip_forward = 0
+    +net.ipv4.ip_forward = 1
+    ```
 Примените изменения командой:
 ```bash
 systemctl restart network
@@ -352,12 +378,10 @@ mcedit /etc/net/ifaces/ens192/resolv.conf
 ```
 nameserver 8.8.8.8
 ```
-
 Перезагрузите сеть:
 ```bash
 systemctl restart network
 ```
-
 Проверьте доступность DNS:
 ```bash
 ping ya.ru
@@ -370,14 +394,16 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
 #### 6.5 Создание VLAN для офиса HQ - VLAN100 (У ВАС БУДУТ ОТЛИЧАТСЯ VLAN)
 
 0. Создайте папку физического интерфейса к примеру ens224 и внутри создайте options со следущим содержимым:
- ```bash
-   BOOTPROTO=static
-   TYPE=eth
-   ```
+  ```
+  BOOTPROTO=static
+  TYPE=eth
+  ```
+
 1. Создайте каталог для подинтерфейса (замените `<имя_физического_интерфейса>` на фактическое имя, например, `ens224`):
    ```bash
    mkdir /etc/net/ifaces/<имя_физического_интерфейса>.100
    ```
+
 2. Отредактируйте файл настроек:
    ```bash
    mcedit /etc/net/ifaces/<имя_физического_интерфейса>.100/options
@@ -392,6 +418,7 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
    ONBOOT=yes
    CONFIG_IPV4=yes
    ```
+
 3. Создайте файл для задания IP-адреса:
    ```bash
    mcedit /etc/net/ifaces/<имя_физического_интерфейса>.100/ipv4address
@@ -400,9 +427,9 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
    ```
    192.168.10.2/26
    ```
-У ВАС VLAN Будут ОТЛИЧАТЬСЯ 
+У ВАС VLAN Будут ОТЛИЧАТЬСЯ
 
-Скопируйте файл options из ens224.100 в папку ens224.200 и ens224.999 и вам надо будет просто отредактировать VID=ваш vlan по заданию
+Скопируйте файл options из ens224.100 в папку ens224.200 и ens224.999 и вам надо будет просто отредактировать VID=ваш vlan по заданию 
 
 #### 6.6 Создание VLAN для офиса HQ – VLAN200
 
@@ -410,6 +437,7 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
    ```bash
    mkdir /etc/net/ifaces/<имя_физического_интерфейса>.200
    ```
+
 2. Отредактируйте файл настроек:
    ```bash
    mcedit /etc/net/ifaces/<имя_физического_интерфейса>.200/options
@@ -424,6 +452,7 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
    ONBOOT=yes
    CONFIG_IPV4=yes
    ```
+
 3. Создайте файл для задания IP-адреса:
    ```bash
    mcedit /etc/net/ifaces/<имя_физического_интерфейса>.200/ipv4address
@@ -436,10 +465,10 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
    ```bash
    mkdir /etc/net/ifaces/<имя_физического_интерфейса>.999
    ```
+
 2. Отредактируйте файл настроек:
    ```bash
    mcedit /etc/net/ifaces/<имя_физического_интерфейса>.999/options
-   
    ```
    Пример содержимого:
    ```
@@ -451,52 +480,56 @@ apt-get update && apt-get install frr dhcp-server wget bind-utils -y
    ONBOOT=yes
    CONFIG_IPV4=yes
    ```
+
 3. Создайте файл для задания IP-адреса:
    ```bash
    mcedit /etc/net/ifaces/<имя_физического_интерфейса>.999/ipv4address
    ```
    Укажите IP-адрес в формате `ip/mask`.
-   
-5. Перезагрузите сеть:
+
+4. Перезагрузите сеть:
    ```bash
    systemctl restart network
    ```
+
 ---
 
 ### 7. Настройка NAT для офиса HQ
 
-У вас будет другие ПОДСЕТИ 
+У вас будет другие ПОДСЕТИ
 
 #### 7.1 Настройка NAT
 ```bash
 iptables -t nat -A POSTROUTING -o ens192 -s 192.168.10.0/26 -j MASQUERADE
 ```
-Сделайте тоже самое для второй сети 
 
+Сделайте тоже самое для второй сети
 ```bash
 iptables -t nat -A POSTROUTING -o ens192 -s 192.168.20.0/28 -j MASQUERADE
 ```
+
 Сохраните правила и перезапустите:
 ```bash
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 ```
+
 7.2 Включение пересылки пакетов
 
 Отредактируйте файл командой ниже по пути `/etc/net/sysctl.conf`:
 ```bash
 mcedit /etc/net/sysctl.conf
 ```
-
-   - Измените строку net.ipv4.ip_forward:
-     ```diff
-     -#net.ipv4.ip_forward = 0
-     +net.ipv4.ip_forward = 1
-     ```
+  - Измените строку net.ipv4.ip_forward:
+    ```diff
+    -#net.ipv4.ip_forward = 0
+    +net.ipv4.ip_forward = 1
+    ```
 Примените изменения командой:
 ```bash
 systemctl restart network
 ```
+
 ---
 
 ### 8. Настройка сети для BR-RTR
@@ -546,12 +579,10 @@ mcedit /etc/net/ifaces/ens192/resolv.conf
 ```
 nameserver 8.8.8.8
 ```
-
 Перезагрузите сеть:
 ```bash
 systemctl restart network
 ```
-
 Проверьте доступность DNS:
 ```bash
 ping ya.ru
@@ -572,7 +603,6 @@ mcedit /etc/net/ifaces/ens224/options
 BOOTPROTO=static
 TYPE=eth
 ```
-
 Создайте или отредактируйте файл ipv4address:
 ```bash
 mcedit /etc/net/ifaces/ens224/ipv4address
@@ -581,12 +611,12 @@ mcedit /etc/net/ifaces/ens224/ipv4address
 ```
 192.168.30.1/27
 ```
-
 Перезагрузите сеть:
 ```bash
 systemctl reboot network
 ```
-Проверьте всё ли появилось если нет значит вы косяк))  Ищите проблему и помните что времени всего 2:30 часа)
+Проверьте всё ли появилось если нет значит вы косяк)) Ищите проблему и помните что времени всего 2:30 часа)
+
 </details>
 
 ---
@@ -604,12 +634,15 @@ systemctl reboot network
 ```
 
 #### 9.2 Настройка NAT
+
 У ВАС БУДУТ ДРУГИЕ ПОДСЕТИ
+
 ```bash
 iptables -t nat -A POSTROUTING -o ens192 -s 192.168.30.0/27 -j MASQUERADE
 ```
 
 #### 9.3 Сохранение правил и автозапуск
+
 ```bash
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
@@ -621,12 +654,11 @@ systemctl enable --now iptables
 ```bash
 mcedit /etc/net/sysctl.conf
 ```
-
-   - Измените строку net.ipv4.ip_forward:
-     ```diff
-     -#net.ipv4.ip_forward = 0
-     +net.ipv4.ip_forward = 1
-     ```
+  - Измените строку net.ipv4.ip_forward:
+    ```diff
+    -#net.ipv4.ip_forward = 0
+    +net.ipv4.ip_forward = 1
+    ```
 Примените изменения командой:
 ```bash
 systemctl restart network
@@ -646,7 +678,7 @@ useradd net_admin
 ```bash
 passwd net_admin
 ```
-_(Пароль: **P@$$word**)_
+*(Пароль: **P@$$word**)*
 
 #### 10.2 Добавление в группу wheel
 ```bash
@@ -668,7 +700,7 @@ mcedit /etc/sudoers
 #### 10.4 Проверка работы sudo
 
 Выйдите из root (команда `exit`) и выполните вход под пользователем `net_admin`:
-```bash
+```
 login: net_admin  
 Password: P@$$word
 ```
@@ -693,7 +725,7 @@ useradd net_admin
 ```bash
 passwd net_admin
 ```
-_(Пароль: **P@$$word**)_
+*(Пароль: **P@$$word**)*
 
 #### 11.2 Добавление в группу wheel
 ```bash
@@ -715,7 +747,7 @@ mcedit /etc/sudoers
 #### 11.4 Проверка sudo
 
 Выйдите из root и выполните вход под пользователем `net_admin`:
-```bash
+```
 login: net_admin  
 Password: P@$$word
 ```
@@ -745,25 +777,24 @@ hostnamectl set-hostname hq-srv.au.team.irpo && exec bash
 
 #### 12.2 Задание IP-адреса
 
-Cоздайте папку саб интерфейса 
+Cоздайте папку саб интерфейса
 ```bash
 mkdir /etc/net/ifaces/ens192.100/
 ```
 Отредактируйте файл options:
-   ```bash
+```bash
 mcedit /etc/net/ifaces/<имя_физического_интерфейса>.100/options
-   ```
-   Пример содержимого:
-   ```
-   TYPE=vlan
-   HOST=ens192
-   VID=100
-   DISABLED=no
-   BOOTPROTO=static
-   ONBOOT=yes
-   CONFIG_IPV4=yes
-   ```
-
+```
+Пример содержимого:
+```
+TYPE=vlan
+HOST=ens192
+VID=100
+DISABLED=no
+BOOTPROTO=static
+ONBOOT=yes
+CONFIG_IPV4=yes
+```
 Создайте или отредактируйте файл:
 ```bash
 mcedit /etc/net/ifaces/ens192.100/ipv4address
@@ -772,6 +803,7 @@ mcedit /etc/net/ifaces/ens192.100/ipv4address
 ```
 192.168.10.2/26
 ```
+
 #### 12.3 Настройка маршрута по умолчанию
 
 Создайте или отредактируйте файл:
@@ -793,26 +825,25 @@ mcedit /etc/net/ifaces/ens192.100/resolv.conf
 ```
 nameserver 8.8.8.8
 ```
-Cоздайте папку саб интерфейса для менаджмент интрефейса 
+
+Cоздайте папку саб интерфейса для менаджмент интрефейса
 ```bash
 mkdir /etc/net/ifaces/ens192.999/
 ```
-
 Отредактируйте файл options:
-   ```bash
+```bash
 mcedit /etc/net/ifaces/<имя_физического_интерфейса>.999/options
-   ```
-   Пример содержимого:
-   ```
-   TYPE=vlan
-   HOST=ens192
-   VID=999
-   DISABLED=no
-   BOOTPROTO=static
-   ONBOOT=yes
-   CONFIG_IPV4=yes
-   ```
-
+```
+Пример содержимого:
+```
+TYPE=vlan
+HOST=ens192
+VID=999
+DISABLED=no
+BOOTPROTO=static
+ONBOOT=yes
+CONFIG_IPV4=yes
+```
 Создайте или отредактируйте файл:
 ```bash
 mcedit /etc/net/ifaces/ens192.999/ipv4address
@@ -821,17 +852,14 @@ mcedit /etc/net/ifaces/ens192.999/ipv4address
 ```
 192.168.99.2/29
 ```
-
 Перезагрузите сеть:
 ```bash
 systemctl restart network
 ```
-
 Проверьте доступность DNS:
 ```bash
 ping ya.ru
 ```
-
 Обновите пакеты и установите всё необходимое командой:
 ```bash
 apt-get update -y && apt-get install bind bind-utils wget -y
@@ -841,7 +869,8 @@ apt-get update -y && apt-get install bind bind-utils wget -y
 
 ### 13. Создание локальной учётной записи на HQ-SRV
 
-У вас -u будет другой 
+У вас -u будет другой
+
 #### 13.1 Создание учётной записи sshuser
 ```bash
 useradd -u 1010 sshuser
@@ -850,7 +879,7 @@ useradd -u 1010 sshuser
 ```bash
 passwd sshuser
 ```
-_(Пароль: **P@ssw0rd**)_
+*(Пароль: **P@ssw0rd**)*
 
 #### 13.2 Добавление в группу wheel
 ```bash
@@ -872,7 +901,7 @@ mcedit /etc/sudoers
 #### 13.4 Проверка sudo
 
 Выйдите из root и выполните вход под пользователем `sshuser`:
-```bash
+```
 login: sshuser
 Password: P@ssw0rd
 ```
@@ -888,6 +917,7 @@ sudo su
    ```bash
    mcedit /etc/openssh/sshd_config
    ```
+
 2. Внесите следующие изменения (раскомментируйте и измените значения ПАРАМЕТРЫ МОГУТ БЫТЬ ДРУГИМИ ЭТО ПРИМЕР):
    - Измените порт с 22 на 2024:
      ```diff
@@ -909,6 +939,7 @@ sudo su
      -#MaxAuthTries 6
      +MaxAuthTries 2
      ```
+
 3. Сохраните изменения (F2, затем F10).
 
 4. Создайте файл баннера:
@@ -924,18 +955,17 @@ sudo su
    ```bash
    systemctl restart sshd.service
    ```
-
 6. Проверьте все ли правильно настроили подключившись по ssh с hq-rtr:
    ```bash
    ssh sshuser@192.168.10.2 -p 2024
    ```
+
 ---
 
 ### 14. Настройка BR-SRV
 
 <details>
   <summary>Развернуть инструкцию</summary>
-
 
 #### 14.0 Задание Часового пояса (если не задан)
 ```bash
@@ -979,18 +1009,17 @@ mcedit /etc/net/ifaces/ens192/resolv.conf
 ```
 nameserver 8.8.8.8
 ```
-
 Перезагрузите сеть:
 ```bash
 systemctl restart network
 ```
-
 Проверьте доступность DNS:
 ```bash
 ping ya.ru
 ```
 
-У вас -u будет другой 
+У вас -u будет другой
+
 #### 14.6 Создание учётной записи sshuser
 ```bash
 useradd -u 1010 sshuser
@@ -999,7 +1028,7 @@ useradd -u 1010 sshuser
 ```bash
 passwd sshuser
 ```
-_(Пароль: **P@ssw0rd**)_
+*(Пароль: **P@ssw0rd**)*
 
 #### 16.7 Добавление в группу wheel
 ```bash
@@ -1021,7 +1050,7 @@ mcedit /etc/sudoers
 #### 16.9 Проверка sudo
 
 Выйдите из root и выполните вход под пользователем `sshuser`:
-```bash
+```
 login: sshuser
 Password: P@ssw0rd
 ```
@@ -1044,6 +1073,7 @@ sudo su
    ```bash
    mcedit /etc/openssh/sshd_config
    ```
+
 2. Внесите следующие изменения (раскомментируйте и измените значения ПАРАМЕТРЫ МОГУТ БЫТЬ ДРУГИМИ ЭТО ПРИМЕР):
    - Измените порт с 22 на 2024:
      ```diff
@@ -1065,6 +1095,7 @@ sudo su
      -#MaxAuthTries 6
      +MaxAuthTries 2
      ```
+
 3. Сохраните изменения (F2, затем F10).
 
 4. Создайте файл баннера:
@@ -1080,7 +1111,6 @@ sudo su
    ```bash
    systemctl restart sshd.service
    ```
-
 6. Проверьте все ли правильно настроили подключившись по ssh с br-rtr:
    ```bash
    ssh sshuser@192.168.30.2 -p 2024
@@ -1107,7 +1137,7 @@ sudo su
    ```bash
    mcedit /etc/net/ifaces/gre1/options
    ```
-   У вас ip могут отличаться 
+   У вас ip могут отличаться
    Пример содержимого:
    ```
    TUNLOCAL=172.16.4.2
@@ -1145,7 +1175,7 @@ sudo su
    ```bash
    mcedit /etc/frr/daemons
    ```
-   - Меняем ospfd:
+     - Меняем ospfd:
      ```diff
      -#ospfd=no
      +ospfd=yes
@@ -1156,7 +1186,8 @@ sudo su
    ```
    systemctl reboot frr
    ```
-5. **Настройка OSPF через vtysh**
+
+6. **Настройка OSPF через vtysh**
 
    Введите:
    ```bash
@@ -1242,10 +1273,10 @@ sudo su
    mcedit /etc/frr/daemons
    ```
      - Меняем ospfd:
-     ```diff
-     -#ospfd=no
-     +ospfd=yes
-     ```
+   ```diff
+   -#ospfd=no
+   +ospfd=yes
+   ```
    Сохраните изменения.
    
    Перезагрузите службу frr:
@@ -1431,3 +1462,30 @@ sudo su
 ЛАДНО ТАК СКАЖУ
 
 С КЛИЕНТА ПОДКЛЮЧАЕМСЯ К СЕРВЕРАМ ПО SSH ПРОВЕРЯЕМ DHS SERVER И ПРОЧИЕ...
+
+---
+
+## Модуль 2: Организация сетевого администрирования
+
+### Задание 1. Настройка контроллера домена Samba DC
+
+Подробная инструкция по настройке Samba DC на BR-SRV, вводу HQ-CLI в домен, созданию пользователей и групп, а также настройке ограниченного sudo.
+
+➡️ **[Перейти к инструкции](module2/task1-samba-dc.md)**
+
+**Краткое содержание:**
+- Установка и настройка Samba DC на BR-SRV
+- Создание домена `au-team.irpo`
+- Настройка Kerberos и DNS
+- Создание группы `hq` и пользователей `hquser1-5`
+- Ввод HQ-CLI в домен через ЦУС
+- Настройка ограниченного sudo (только `cat`, `grep`, `id`)
+
+---
+
+## Полезные ссылки
+
+- [IP-калькулятор](https://jodies.de/ipcalc)
+- [Документация ALT Linux](https://docs.altlinux.org/)
+- [FRRouting Documentation](https://docs.frrouting.org/)
+- [Samba Wiki](https://wiki.samba.org/)
