@@ -46,7 +46,12 @@ samba-tool domain provision
 - **DNS forwarder IP address**: `192.168.100.2` (IP HQ-SRV или другой DNS)
 - **Administrator password**: введите пароль (минимум 7 символов, буквы верхнего/нижнего регистра, цифры)
 
+![Развёртывание домена](Images/01-domain-provision.png)
+
 Пример успешного вывода:
+
+![Успешное развёртывание](Images/02-provision-success.png)
+
 ```
 Server Role:            active directory domain controller
 Hostname:               br-srv
@@ -98,22 +103,13 @@ systemctl restart network
 samba-tool domain info 127.0.0.1
 ```
 
-Ожидаемый вывод:
-```
-Forest           : au-team.irpo
-Domain           : au-team.irpo
-Netbios domain   : AU-TEAM
-DC name          : br-srv.au-team.irpo
-DC netbios name  : BR-SRV
-Server site      : Default-First-Site-Name
-Client site      : Default-First-Site-Name
-```
-
 Проверка SMB-шар:
 
 ```bash
 smbclient -L 127.0.0.1 -U administrator
 ```
+
+![Проверка домена](Images/03-domain-info.png)
 
 Введите пароль администратора. Должны отобразиться шары `sysvol` и `netlogon`.
 
@@ -134,6 +130,8 @@ host -t SRV _ldap._tcp.au-team.irpo
 host br-srv.au-team.irpo
 ```
 
+![Проверка DNS](Images/04-dns-check.png)
+
 #### 1.8 Проверка Kerberos
 
 Получение билета (имя домена в ВЕРХНЕМ регистре):
@@ -148,15 +146,7 @@ kinit Administrator@AU-TEAM.IRPO
 klist
 ```
 
-Ожидаемый вывод:
-```
-Ticket cache: FILE:/tmp/krb5cc_0
-Default principal: Administrator@AU-TEAM.IRPO
-
-Valid starting       Expires              Service principal
-09/05/25 08:38:43    09/05/25 18:38:43    krbtgt/AU-TEAM.IRPO@AU-TEAM.IRPO
-        renew until 09/06/25 08:38:41
-```
+![Проверка Kerberos](Images/05-kerberos-check.png)
 
 ---
 
@@ -168,11 +158,15 @@ Valid starting       Expires              Service principal
 samba-tool group add hq
 ```
 
+![Создание группы](Images/06-group-add.png)
+
 Проверка:
 
 ```bash
-samba-tool group list | grep hq
+samba-tool group list
 ```
+
+![Список групп](Images/07-group-list.png)
 
 #### 2.2 Создание пользователей и добавление в группу
 
@@ -214,6 +208,8 @@ hquser5
 - **Шлюз**: `192.168.200.1`
 - **DNS**: `192.168.0.2` (IP адрес BR-SRV)
 
+![Настройка сети](Images/08-network-settings.png)
+
 Или через командную строку:
 
 ```bash
@@ -239,6 +235,9 @@ apt-get update && apt-get install -y task-auth-ad-sssd
 
 1. Откройте **Центр управления системой**
 2. Перейдите в раздел **Пользователи** → **Аутентификация**
+
+![ЦУС - Аутентификация](Images/09-cus-auth.png)
+
 3. Выберите **Active Directory**
 4. Введите:
    - Домен: `au-team.irpo`
@@ -248,13 +247,14 @@ apt-get update && apt-get install -y task-auth-ad-sssd
 5. Нажмите **Применить**
 
 При успешном вводе появится сообщение:
-```
-Добро пожаловать в домен AU-TEAM.IRPO.
-```
+
+![Успешный ввод в домен](Images/10-domain-welcome.png)
 
 #### 3.4 Перезагрузка HQ-CLI
 
 После ввода в домен необходимо перезагрузить машину:
+
+![Перезагрузка](Images/11-reboot.png)
 
 ```bash
 reboot
@@ -276,6 +276,8 @@ apt-get install -y libnss-role
 control libnss-role
 ```
 
+![Проверка libnss-role](Images/12-libnss-role.png)
+
 Ожидаемый вывод: `enabled`
 
 #### 4.2 Связывание доменной группы с локальной группой wheel
@@ -289,6 +291,8 @@ roleadd hq wheel
 ```bash
 rolelst
 ```
+
+![Связывание групп](Images/13-roleadd.png)
 
 Ожидаемый вывод должен содержать строку:
 ```
@@ -309,12 +313,20 @@ visudo
 nano /etc/sudoers
 ```
 
-Добавляем следующие строки:
+Добавляем алиас для разрешённых команд:
+
+![Cmnd_Alias в sudoers](Images/14-sudoers-cmnd.png)
 
 ```sudoers
 ## Cmnd alias specification
 Cmnd_Alias      SHELLCMD = /bin/cat, /bin/grep, /usr/bin/id
+```
 
+Добавляем правило для группы wheel:
+
+![WHEEL_USERS в sudoers](Images/15-sudoers-wheel.png)
+
+```sudoers
 ## User privilege specification
 WHEEL_USERS ALL=(ALL:ALL) SHELLCMD
 ```
@@ -327,7 +339,13 @@ WHEEL_USERS ALL=(ALL:ALL) SHELLCMD
 
 #### 5.1 Вход под доменным пользователем
 
-На экране входа HQ-CLI нажмите **"Нет в списке?"** и введите:
+На экране входа HQ-CLI нажмите **"Нет в списке?"**:
+
+![Выход пользователя](Images/16-logout.png)
+
+![Нет в списке](Images/17-not-in-list.png)
+
+Введите:
 - Логин: `hquser3` (или любой созданный пользователь)
 - Пароль: `P@ssw0rd`
 
@@ -335,38 +353,26 @@ WHEEL_USERS ALL=(ALL:ALL) SHELLCMD
 
 ```bash
 sudo id
-```
-Результат: выполняется успешно, показывает информацию о root.
-
-```bash
 sudo cat /etc/hosts
-```
-Результат: выполняется успешно, показывает содержимое файла.
-
-```bash
 sudo grep '127.0.0.1' /etc/hosts
 ```
-Результат: выполняется успешно, показывает отфильтрованные строки.
+
+![Проверка разрешённых команд](Images/18-sudo-allowed.png)
+
+Результат: все команды выполняются успешно.
 
 #### 5.3 Проверка запрещённых команд
 
 ```bash
 sudo su -
 ```
+
+![Проверка запрещённых команд](Images/19-sudo-denied.png)
+
 Результат: **отказано в доступе**
 ```
 Извините, пользователю hquser3 не разрешено выполнять «/bin/su -» как root на hq-cli.au-team.irpo.
 ```
-
-```bash
-sudo reboot
-```
-Результат: **отказано в доступе**
-
-```bash
-sudo nano /etc/hosts
-```
-Результат: **отказано в доступе**
 
 ---
 
